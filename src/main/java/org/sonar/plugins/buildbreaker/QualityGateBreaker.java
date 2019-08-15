@@ -83,11 +83,7 @@ public final class QualityGateBreaker implements PostJob {
 
     boolean shouldExecuteOnProject() {
         if (!analysisMode.isPublish()) {
-            LOGGER.debug(
-                    "{} is disabled ({} != {})",
-                    CLASSNAME,
-                    CoreProperties.ANALYSIS_MODE,
-                    CoreProperties.ANALYSIS_MODE_PUBLISH);
+            LOGGER.debug("{} is disabled ({} != {})", CLASSNAME);
             return false;
         }
         if (settings.getBoolean(BuildBreakerPlugin.SKIP_KEY)) {

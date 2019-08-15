@@ -57,7 +57,7 @@
   <properties>
     <license.owner>${project.organization.name}</license.owner>
     <license.mailto>${project.organization.url}</license.mailto>
-    <sonar.version>7.3</sonar.version>
+    <sonar.version>7.9</sonar.version>
     <sonar.pluginName>Build Breaker</sonar.pluginName>
     <sonar.pluginClass>org.sonar.plugins.buildbreaker.BuildBreakerPlugin</sonar.pluginClass>
     <version.sonar-packaging.plugin>1.17</version.sonar-packaging.plugin>
@@ -74,6 +74,11 @@
       <groupId>org.sonarsource.sonarqube</groupId>
       <artifactId>sonar-ws</artifactId>
       <version>${sonar.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>28.0-jre</version>
     </dependency>
     <!-- unit tests -->
     <dependency>

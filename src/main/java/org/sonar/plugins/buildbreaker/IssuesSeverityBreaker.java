@@ -19,20 +19,18 @@
  */
 package org.sonar.plugins.buildbreaker;
 
-import com.google.common.base.Strings;
-import org.sonar.api.CoreProperties;
 import org.sonar.api.batch.AnalysisMode;
 import org.sonar.api.batch.postjob.PostJob;
 import org.sonar.api.batch.postjob.PostJobContext;
 import org.sonar.api.batch.postjob.PostJobDescriptor;
-import org.sonar.api.config.Settings;
-import org.sonar.api.issue.Issue;
-import org.sonar.api.issue.ProjectIssues;
+import org.sonar.api.batch.postjob.issue.PostJobIssue;
 import org.sonar.api.rule.Severity;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
 
 import java.util.Locale;
+
+import static com.google.common.base.Strings.nullToEmpty;
 
 /**
  * Checks the project's issues for the configured severity level or higher. Breaks the build if any
@@ -45,34 +43,10 @@ public final class IssuesSeverityBreaker implements PostJob {
 
     private static final Logger LOGGER = Loggers.get(ForbiddenConfigurationBreaker.class);
 
-    private final AnalysisMode analysisMode;
-    private final ProjectIssues projectIssues;
-    private final String issuesSeveritySetting;
-    private final int issuesSeveritySettingValue;
 
-    /**
-     * Constructor used to inject dependencies.
-     *
-     * @param analysisMode  the analysis mode
-     * @param projectIssues the project's issues
-     * @param settings      the project settings
-     */
-    public IssuesSeverityBreaker(AnalysisMode analysisMode, ProjectIssues projectIssues, Settings settings) {
-        this.analysisMode = analysisMode;
-        this.projectIssues = projectIssues;
-        issuesSeveritySetting =
-                Strings.nullToEmpty(settings.getString(BuildBreakerPlugin.ISSUES_SEVERITY_KEY))
-                        .toUpperCase(Locale.US);
-        issuesSeveritySettingValue = Severity.ALL.indexOf(issuesSeveritySetting);
-    }
-
-    boolean shouldExecuteOnProject() {
+    boolean shouldExecuteOnProject(AnalysisMode analysisMode, String issuesSeveritySetting, int issuesSeveritySettingValue) {
         if (analysisMode.isPublish()) {
-            LOGGER.debug(
-                    "{} is disabled ({} == {})",
-                    CLASSNAME,
-                    CoreProperties.ANALYSIS_MODE,
-                    CoreProperties.ANALYSIS_MODE_PUBLISH);
+            LOGGER.debug("{} is disabled", CLASSNAME);
             return false;
         }
         if (issuesSeveritySettingValue < 0) {
@@ -93,9 +67,17 @@ public final class IssuesSeverityBreaker implements PostJob {
 
     @Override
     public void execute(PostJobContext context) {
-        if (shouldExecuteOnProject()) {
-            for (Issue issue : projectIssues.issues()) {
-                if (Severity.ALL.indexOf(issue.severity()) >= issuesSeveritySettingValue) {
+        AnalysisMode analysisMode = context.analysisMode();
+
+        String issuesSeveritySetting = nullToEmpty(
+                context.settings().getString(BuildBreakerPlugin.ISSUES_SEVERITY_KEY)
+        ).toUpperCase(Locale.US);
+
+        int issuesSeveritySettingValue = Severity.ALL.indexOf(issuesSeveritySetting);
+
+        if (shouldExecuteOnProject(analysisMode, issuesSeveritySetting, issuesSeveritySettingValue)) {
+            for (PostJobIssue issue : context.issues()) {
+                if (issue.severity().ordinal() >= issuesSeveritySettingValue) {
                     // only mark failure and fail on PostJobsPhaseHandler.onPostJobsPhase() to ensure other
                     // plugins can finish their work, most notably the stash issue reporter plugin
                     String failureMessage =
